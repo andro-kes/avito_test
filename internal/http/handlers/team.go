@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"errors"
+
 	prerrors "github.com/andro-kes/avito_test/internal/errors"
 	"github.com/andro-kes/avito_test/internal/models"
 	"github.com/gin-gonic/gin"
@@ -15,6 +17,10 @@ func (hm *HandlerManager) AddTeam(c *gin.Context) {
 
 	ctx := c.Request.Context()
 	if err := hm.TeamService.CheckUnique(ctx, team.TeamName); err != nil {
+		if errors.Is(err, prerrors.ErrServer) {
+			c.AbortWithStatusJSON(500, err)
+			return
+		}
 		c.AbortWithStatusJSON(400, prerrors.ErrTeamExists)
 		return
 	}

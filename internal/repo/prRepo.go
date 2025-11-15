@@ -21,24 +21,26 @@ func NewPRRepo(pool *pgxpool.Pool) PRRepo {
 }
 
 func (p *prRepo) CreatePR(ctx context.Context, q db.Querier, pr *models.PullRequestShort, reviewers []string) (*models.PullRequest, error) {
+	const status = "OPEN"
+
 	sql := `
 	INSERT INTO pull_requests 
     (pull_request_id, pull_request_name, author_id, status, assigned_reviewers, created_at, merged_at)
 	VALUES 
     ($1, $2, $3, $4, $5, $6, $7)
 	RETURNING 
-    pull_request_id, pull_request_name, author_id, status, assigned_reviewers
+    pull_request_id, pull_request_name, author_id, status, assigned_reviewers, created_at
 	`
 	
 	var pullRequest models.PullRequest
 	err := q.QueryRow(
 		ctx,
 		sql,
-		pr.PullRequestId, pr.PullRequestName, pr.AuthorId, pr.Status, reviewers, time.Now(), nil,
+		pr.PullRequestId, pr.PullRequestName, pr.AuthorId, status, reviewers, time.Now(), nil,
 	).Scan(
 		&pullRequest.PullRequestId, &pullRequest.PullRequestName,
 		&pullRequest.AuthorId, &pullRequest.Status,
-		&pullRequest.AssignedReviewers,
+		&pullRequest.AssignedReviewers, &pullRequest.CreatedAt,
 	)
 
 	return &pullRequest, err

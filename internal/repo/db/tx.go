@@ -35,8 +35,7 @@ func (t *tx) RunInTx(ctx context.Context, fn func(ctx context.Context, q Querier
 	}
 	defer px.Rollback(ctx)
 
-	if fn(ctx, px) != nil {
-		px.Rollback(ctx)
+	if err := fn(ctx, px); err != nil {
 		return err
 	}
 

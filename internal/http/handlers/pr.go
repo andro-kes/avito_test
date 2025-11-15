@@ -4,13 +4,16 @@ import (
 	"errors"
 
 	prerrors "github.com/andro-kes/avito_test/internal/errors"
+	logger "github.com/andro-kes/avito_test/internal/log"
 	"github.com/andro-kes/avito_test/internal/models"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 func (hm *HandlerManager) CreatePR(c *gin.Context) {
 	var pr models.PullRequestShort
 	if err := c.ShouldBindJSON(&pr); err != nil {
+		logger.Log.Error("Не десериализовать объект", zap.Error(err))
 		c.AbortWithStatusJSON(404, prerrors.ErrNotFound)
 		return
 	}
@@ -18,20 +21,24 @@ func (hm *HandlerManager) CreatePR(c *gin.Context) {
 	ctx := c.Request.Context()
 	exists, err := hm.PRService.CheckExistingPR(ctx, pr.PullRequestId)
 	if err != nil {
+		logger.Log.Error("Server error", zap.Error(err))
 		c.AbortWithStatusJSON(500, prerrors.ErrServer)
 		return
 	}
 	if exists {
+		logger.Log.Error("PR существует", zap.Error(err))
 		c.AbortWithStatusJSON(409, prerrors.ErrPRExists)
 		return
 	}
 	
 	new, err := hm.PRService.CreatePR(ctx, &pr)
 	if err != nil {
+		logger.Log.Error("Server error", zap.Error(err))
 		c.AbortWithError(500, prerrors.ErrServer)
+		return
 	}
 
-	c.JSON(201, *new)
+	c.JSON(201, new)
 }
 
 

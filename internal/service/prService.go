@@ -2,14 +2,17 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"time"
 
 	prerrors "github.com/andro-kes/avito_test/internal/errors"
+	logger "github.com/andro-kes/avito_test/internal/log"
 	"github.com/andro-kes/avito_test/internal/models"
 	"github.com/andro-kes/avito_test/internal/repo"
 	"github.com/andro-kes/avito_test/internal/repo/db"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.uber.org/zap"
 )
 
 type PRService struct {
@@ -31,12 +34,20 @@ func (ps *PRService) CreatePR(ctx context.Context, pr *models.PullRequestShort) 
 		if err != nil {
 			return err
 		}
+		logger.Log.Info(fmt.Sprintf("Найдено %d кандидатов в ревьюеры", len(activeReviewers)))
+		
 		reviewers := random(activeReviewers)
+		logger.Log.Info(
+			fmt.Sprintf("Назначено %d ревьюера", len(reviewers)),
+			zap.Any("reviewers", reviewers),
+			zap.String("pr_id", pr.PullRequestId),
+		)
 
 		newPR, err := ps.Repo.CreatePR(ctx, q, pr, reviewers)
 		if err != nil {
 			return err
 		}
+		logger.Log.Info("PR создан")
 		pullRequest = newPR
 		return nil
 	})
