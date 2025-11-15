@@ -10,10 +10,10 @@ import (
 type PRRepo interface {
 	CreatePR(ctx context.Context, q db.Querier, pr *models.PullRequestShort, reviewers []string) (*models.PullRequest, error)
 	FindActiveReviewers(ctx context.Context, author_id string) ([]string, error)
-	CheckExistingPR(ctx context.Context, id string) error
+	CheckExistingPR(ctx context.Context, id string) (bool, error)
 	MergePR(ctx context.Context, id string) (*models.PullRequest, error)
 	IsMerged(ctx context.Context, id string) error
-	FindReplacementReviewers(ctx context.Context, prID string) ([]string, error)
+	FindReplacementReviewers(ctx context.Context, prID, oldUserId string) ([]string, error)
 	GetReview(ctx context.Context, userId string) ([]models.PullRequestShort, error)
 	ReassignReviewer(ctx context.Context, q db.Querier, prId, oldUserId, replacedBy string) (*models.PullRequest, error)
 }

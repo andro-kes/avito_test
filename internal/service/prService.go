@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"time"
 
+	prerrors "github.com/andro-kes/avito_test/internal/errors"
 	"github.com/andro-kes/avito_test/internal/models"
 	"github.com/andro-kes/avito_test/internal/repo"
 	"github.com/andro-kes/avito_test/internal/repo/db"
@@ -59,7 +60,7 @@ func random(r []string) []string {
 	return r[:2]
 }
 
-func (ps *PRService) GetPR(ctx context.Context, id string) error {
+func (ps *PRService) CheckExistingPR(ctx context.Context, id string) (bool, error) {
 	return ps.Repo.CheckExistingPR(ctx, id)
 }
 
@@ -75,11 +76,15 @@ func (ps *PRService) ReassignReviewer(ctx context.Context, prId, oldUserId strin
 	var pr *models.PullRequest
 	var replacedBy string
 	err := ps.Tx.RunInTx(ctx, func(ctx context.Context, q db.Querier) error {
-		replacement, err := ps.Repo.FindReplacementReviewers(ctx, prId)
+		replacement, err := ps.Repo.FindReplacementReviewers(ctx, prId, oldUserId)
 		if err != nil {
 			return err
 		}
-		// TODO check 0 candidates
+
+		if len(replacement) == 0 {
+			return prerrors.ErrNoCandidate
+		}
+
 		replacedBy = random(replacement)[0]
 		pr, err = ps.Repo.ReassignReviewer(ctx, q, prId, oldUserId, replacedBy)
 		return err

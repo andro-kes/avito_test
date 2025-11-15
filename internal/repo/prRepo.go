@@ -79,20 +79,17 @@ func (p *prRepo) FindActiveReviewers(ctx context.Context, authorId string) ([]st
     return active, nil
 }
 
-func (p *prRepo) CheckExistingPR(ctx context.Context, id string) error {
-	var exists bool
-	err := p.Pool.QueryRow(
-		ctx,
-		"SELECT EXISTS(SELECT 1 FROM pull_requests WHERE pull_request_id = $1)",
-		id,
-	).Scan(&exists)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return prerrors.ErrPRExists
-	}
-	return nil
+func (p *prRepo) CheckExistingPR(ctx context.Context, id string) (bool, error) {
+    var exists bool
+    err := p.Pool.QueryRow(
+        ctx,
+        "SELECT EXISTS(SELECT 1 FROM pull_requests WHERE pull_request_id = $1)",
+        id,
+    ).Scan(&exists)
+    if err != nil {
+        return false, err
+    }
+    return exists, nil
 }
 
 func (p *prRepo) MergePR(ctx context.Context, id string) (*models.PullRequest, error) {
@@ -147,19 +144,20 @@ func (p *prRepo) IsMerged(ctx context.Context, id string) error {
 	return nil
 }
 
-func (p *prRepo) FindReplacementReviewers(ctx context.Context, prID string) ([]string, error) {
+func (p *prRepo) FindReplacementReviewers(ctx context.Context, prID, oldUserId string) ([]string, error) {
     sql := `
 	SELECT u.user_id
 	FROM users u
-	INNER JOIN users author ON u.team_name = author.team_name
+	INNER JOIN users old_reviewer ON u.team_name = old_reviewer.team_name
 	INNER JOIN pull_requests pr ON pr.pull_request_id = $1
-	WHERE author.user_id = pr.author_id
+	WHERE old_reviewer.user_id = $2
 	AND u.is_active = TRUE
 	AND u.user_id <> pr.author_id
+	AND u.user_id <> $2
 	AND u.user_id <> ALL(pr.assigned_reviewers)
     `
 
-    rows, err := p.Pool.Query(ctx, sql, prID)
+    rows, err := p.Pool.Query(ctx, sql, prID, oldUserId)
     if err != nil {
         return nil, err
     }
@@ -182,6 +180,19 @@ func (p *prRepo) FindReplacementReviewers(ctx context.Context, prID string) ([]s
 }
 
 func (p *prRepo) ReassignReviewer(ctx context.Context, q db.Querier, prId, oldUserId, replacedBy string) (*models.PullRequest, error) {
+	var isAssigned bool
+	err := q.QueryRow(
+		ctx,
+		"SELECT $1 = ANY(assigned_reviewers) FROM pull_requests WHERE pull_request_id = $2",
+		oldUserId, prId,
+	).Scan(&isAssigned)
+	if err != nil {
+		return nil, prerrors.ErrNotFound
+	}
+	if !isAssigned {
+		return nil, prerrors.ErrNotAssigned
+	}
+
 	const sql = `
 	UPDATE pull_requests
 	SET assigned_reviewers = array_replace(assigned_reviewers, $1, $2)
@@ -192,7 +203,7 @@ func (p *prRepo) ReassignReviewer(ctx context.Context, q db.Querier, prId, oldUs
 	`
 
 	var pr models.PullRequest
-	err := q.QueryRow(
+	err = q.QueryRow(
 		ctx,
 		sql,
 		oldUserId, replacedBy, prId,
@@ -204,7 +215,11 @@ func (p *prRepo) ReassignReviewer(ctx context.Context, q db.Querier, prId, oldUs
 		&pr.AssignedReviewers,
 	)
 
-	return &pr, err
+	if err != nil {
+		return nil, err
+	}
+
+	return &pr, nil
 }
 
 func (p *prRepo) GetReview(ctx context.Context, userId string) ([]models.PullRequestShort, error) {
@@ -212,8 +227,7 @@ func (p *prRepo) GetReview(ctx context.Context, userId string) ([]models.PullReq
 	SELECT 
 	pull_request_id, pull_request_name, author_id, status
 	FROM pull_requests
-	WHERE
-	pull_request_id=$1
+	WHERE $1 = ANY(assigned_reviewers)
 	`
 
 	prs := make([]models.PullRequestShort, 0, 4)
@@ -229,7 +243,12 @@ func (p *prRepo) GetReview(ctx context.Context, userId string) ([]models.PullReq
 
 	for rows.Next() {
 		var pr models.PullRequestShort
-		if err := rows.Scan(&pr); err != nil {
+		if err := rows.Scan(
+			&pr.PullRequestId,
+			&pr.PullRequestName,
+			&pr.AuthorId,
+			&pr.Status,
+		); err != nil {
 			return prs, err
 		}
 		prs = append(prs, pr)

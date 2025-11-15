@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"errors"
+
 	prerrors "github.com/andro-kes/avito_test/internal/errors"
 	"github.com/andro-kes/avito_test/internal/models"
 	"github.com/gin-gonic/gin"
@@ -8,18 +10,22 @@ import (
 
 func (hm *HandlerManager) CreatePR(c *gin.Context) {
 	var pr models.PullRequestShort
-	if err := c.ShouldBindBodyWithJSON(&pr); err != nil {
+	if err := c.ShouldBindJSON(&pr); err != nil {
 		c.AbortWithStatusJSON(404, prerrors.ErrNotFound)
 		return
 	}
 
 	ctx := c.Request.Context()
-	err := hm.PRService.GetPR(ctx, pr.PullRequestId)
+	exists, err := hm.PRService.CheckExistingPR(ctx, pr.PullRequestId)
 	if err != nil {
+		c.AbortWithStatusJSON(500, prerrors.ErrServer)
+		return
+	}
+	if exists {
 		c.AbortWithStatusJSON(409, prerrors.ErrPRExists)
 		return
 	}
-
+	
 	new, err := hm.PRService.CreatePR(ctx, &pr)
 	if err != nil {
 		c.AbortWithError(500, prerrors.ErrServer)
@@ -45,12 +51,8 @@ func (hm *HandlerManager) MergePR(c *gin.Context) {
 	c.JSON(200, *merged)
 }
 
-type reassign struct {
-	PullRequestId string `json:"pull_request_id"`
-	OldUserId string `json:"old_reviewer_id"`
-}
 func (hm *HandlerManager) ReassignReviewer(c *gin.Context) {
-	var r reassign
+	var r models.ReassignRequest
 	if err := c.ShouldBindBodyWithJSON(&r); err != nil {
 		c.AbortWithStatusJSON(404, prerrors.ErrNotFound)
 		return
@@ -59,12 +61,24 @@ func (hm *HandlerManager) ReassignReviewer(c *gin.Context) {
 	ctx := c.Request.Context()
 	err := hm.PRService.IsMerged(ctx, r.PullRequestId)
 	if err != nil {
-		c.AbortWithStatusJSON(409, prerrors.ErrPRMerged)
+		if errors.Is(err, prerrors.ErrPRMerged) {
+			c.AbortWithStatusJSON(409, prerrors.ErrPRMerged)
+			return
+		}
+		c.AbortWithStatusJSON(404, prerrors.ErrNotFound)
 		return
 	}
 
-	pr, replaced_by, err := hm.PRService.ReassignReviewer(ctx, r.PullRequestId, r.PullRequestId)
+	pr, replaced_by, err := hm.PRService.ReassignReviewer(ctx, r.PullRequestId, r.OldUserId)
 	if err != nil {
+		if errors.Is(err, prerrors.ErrNoCandidate) {
+			c.AbortWithStatusJSON(409, prerrors.ErrNoCandidate)
+			return
+		}
+		if errors.Is(err, prerrors.ErrNotAssigned) {
+			c.AbortWithStatusJSON(409, prerrors.ErrNotAssigned)
+			return
+		}
 		c.AbortWithStatusJSON(404, prerrors.ErrNotFound)
 		return
 	}

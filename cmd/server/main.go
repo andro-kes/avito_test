@@ -11,6 +11,7 @@ import (
 	"github.com/andro-kes/avito_test/internal/config"
 	"github.com/andro-kes/avito_test/internal/http/handlers"
 	"github.com/andro-kes/avito_test/internal/http/middleware"
+	"github.com/andro-kes/avito_test/internal/migrations"
 	logger "github.com/andro-kes/avito_test/internal/log"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -19,7 +20,6 @@ import (
 
 func main() {
 	logger.Init()
-	// close in defer
 	cfg := config.Init()
 
 	router := gin.Default()
@@ -28,6 +28,10 @@ func main() {
 	pool, err := NewPool(ctx)
 	if err != nil {
 		logger.Log.Fatal("failed to create pool")
+	}
+
+	if err := applyMigrations(ctx, pool); err != nil {
+		logger.Log.Fatal("failed to apply migrations", zap.Error(err))
 	}
 
 	handlerManager := handlers.NewHandlerManager(pool)
@@ -64,7 +68,11 @@ func main() {
 	<-quit
 
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
-	defer cancel()
+	defer func(){
+		cancel()
+		logger.Close()
+	}()
+	
 	if err := srv.Shutdown(ctx); err != nil {
 		logger.Log.Error("server forced to shutdown", zap.String("error", err.Error()))
 	}
@@ -103,4 +111,8 @@ func NewPool(ctx context.Context) (*pgxpool.Pool, error) {
 	}
 	
 	return pool, nil
+}
+
+func applyMigrations(ctx context.Context, pool *pgxpool.Pool) error {
+	return migrations.ApplyMigrations(ctx, pool)
 }

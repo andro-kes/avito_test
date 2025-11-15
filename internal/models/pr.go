@@ -18,3 +18,8 @@ type PullRequestShort struct {
 	AuthorId string `json:"author_id"`
 	Status string `json:"status"`
 }
+
+type ReassignRequest struct {
+	PullRequestId string `json:"pull_request_id"`
+	OldUserId      string `json:"old_user_id"`
+}
