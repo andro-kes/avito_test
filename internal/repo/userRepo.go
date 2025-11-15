@@ -5,6 +5,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	prerrors "github.com/andro-kes/avito_test/internal/errors"
 	"github.com/andro-kes/avito_test/internal/models"
 	"github.com/andro-kes/avito_test/internal/repo/db"
 )
@@ -63,4 +64,38 @@ func (ur *userRepo) GetUser(ctx context.Context, userId string) (*models.User, e
 	).Scan(&user.UserId, &user.Username, &user.TeamName, &user.IsActive)
 
 	return &user, err
+}
+
+func (ur *userRepo) CountReview(ctx context.Context, userId string) (int, error) {
+	// Проверяем существование пользователя
+	var exists bool
+	err := ur.Pool.QueryRow(
+		ctx,
+		"SELECT EXISTS(SELECT 1 FROM users WHERE user_id = $1)",
+		userId,
+	).Scan(&exists)
+	if err != nil {
+		return 0, err
+	}
+	if !exists {
+		return 0, prerrors.ErrNotFound
+	}
+
+	const sql = `
+	SELECT COUNT(*) 
+	FROM pull_requests 
+	WHERE $1 = ANY(assigned_reviewers)
+	`
+
+	var cnt int
+	err = ur.Pool.QueryRow(
+		ctx,
+		sql,
+		userId,
+	).Scan(&cnt)
+	if err != nil {
+		return 0, err
+	}
+
+	return cnt, nil
 }

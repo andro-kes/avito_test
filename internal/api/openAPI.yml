@@ -424,3 +424,37 @@ paths:
                     pull_request_name: Add search
                     author_id: u1
                     status: OPEN
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /users/countReview:
+    get:
+      tags: [Users]
+      summary: Получить количество PR'ов, где пользователь назначен ревьювером
+      parameters:
+        - $ref: '#/components/parameters/UserIdQuery'
+      responses:
+        '200':
+          description: Количество PR'ов пользователя
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ user_id, reviews ]
+                properties:
+                  user_id:
+                    type: string
+                  reviews:
+                    type: integer
+                    description: Количество назначенных PR'ов
+              example:
+                user_id: u2
+                reviews: 5
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }

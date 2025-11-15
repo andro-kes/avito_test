@@ -39,7 +39,9 @@ func (hm *HandlerManager) CreatePR(c *gin.Context) {
 		return
 	}
 
-	c.JSON(201, createdPR)
+	c.JSON(201, gin.H{
+		"pr": createdPR,
+	})
 }
 
 func (hm *HandlerManager) MergePR(c *gin.Context) {
@@ -53,9 +55,12 @@ func (hm *HandlerManager) MergePR(c *gin.Context) {
 	merged, err := hm.PRService.MergePR(ctx, pr.PullRequestId)
 	if err != nil {
 		c.AbortWithStatusJSON(404, prerrors.ErrNotFound)
+		return
 	}
 
-	c.JSON(200, *merged)
+	c.JSON(200, gin.H{
+		"pr": merged,
+	})
 }
 
 func (hm *HandlerManager) ReassignReviewer(c *gin.Context) {

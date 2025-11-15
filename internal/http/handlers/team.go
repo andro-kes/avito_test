@@ -37,7 +37,9 @@ func (hm *HandlerManager) AddTeam(c *gin.Context) {
 		return
 	}
 
-	c.JSON(201, newTeam)
+	c.JSON(201, gin.H{
+		"team": newTeam,
+	})
 }
 
 func (hm *HandlerManager) GetTeam(c *gin.Context) {

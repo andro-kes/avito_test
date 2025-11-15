@@ -31,3 +31,7 @@ func (us *UserService) SetIsActive(ctx context.Context, userId string, isActive 
 func (us *UserService) GetUser(ctx context.Context, userId string) (*models.User, error) {
 	return us.Repo.GetUser(ctx, userId)
 }
+
+func (us *UserService) CountReview(ctx context.Context, userId string) (int, error) {
+	return us.Repo.CountReview(ctx, userId)
+}

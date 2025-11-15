@@ -27,5 +27,6 @@ type TeamRepo interface {
 type UserRepo interface {
 	GetUser(ctx context.Context, userId string) (*models.User, error)
 	SetIsActive(ctx context.Context, q db.Querier, userId string, isActive bool) error
+	CountReview(ctx context.Context, userId string) (int, error)
 	UpsertUser(ctx context.Context, q db.Querier, name string, m models.TeamMember) error
 }
