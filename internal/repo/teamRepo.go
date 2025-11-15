@@ -3,10 +3,11 @@ package repo
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	prerrors "github.com/andro-kes/avito_test/internal/errors"
 	"github.com/andro-kes/avito_test/internal/models"
 	"github.com/andro-kes/avito_test/internal/repo/db"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type teamRepo struct {
@@ -34,16 +35,16 @@ func (tr *teamRepo) CheckUnique(ctx context.Context, name string) error {
 		return prerrors.ErrTeamExists
 	}
 
-	return nil 
+	return nil
 }
 
 func (tr *teamRepo) CreateTeam(ctx context.Context, q db.Querier, name string) error {
-    _, err := q.Exec(
-        ctx,
-        "INSERT INTO teams (team_name) VALUES ($1)",
-        name,
-    )
-    return err
+	_, err := q.Exec(
+		ctx,
+		"INSERT INTO teams (team_name) VALUES ($1)",
+		name,
+	)
+	return err
 }
 
 func (tr *teamRepo) GetTeam(ctx context.Context, name string) (*models.Team, error) {

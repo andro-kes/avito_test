@@ -1,0 +1,171 @@
+# Конфигурация golangci-lint для проекта PR Reviewer Assignment Service
+# Документация: https://golangci-lint.run/usage/configuration/
+
+run:
+  # Таймаут для анализа
+  timeout: 5m
+  
+  # Включить тесты
+  tests: true
+
+# Настройки вывода
+output:
+  # Формат вывода
+  formats:
+    - format: colored-line-number
+  
+  # Показывать только новые проблемы
+  print-issued-lines: true
+  print-linter-name: true
+
+# Включенные линтеры
+linters:
+  enable:
+    # Базовые линтеры
+    - errcheck          # Проверка обработки ошибок
+    - gosimple          # Упрощение кода
+    - govet             # Статический анализ (go vet)
+    - ineffassign       # Неиспользуемые присваивания
+    - staticcheck       # Статический анализ
+    - typecheck         # Проверка типов
+    - unused            # Неиспользуемый код
+    
+    # Стиль кода
+    - gofmt             # Форматирование
+    - goimports         # Импорты
+    - gci               # Сортировка импортов
+    - misspell          # Орфографические ошибки
+    
+    # Сложность и качество
+    - gocritic          # Критический анализ кода
+    - gocyclo           # Цикломатическая сложность
+    - gosec             # Безопасность
+    - dupl              # Дублирование кода
+    
+    # Документация
+    - godot             # Точки в комментариях
+    - godox             # TODO/FIXME комментарии
+    
+    # Производительность
+    - prealloc          # Предварительное выделение памяти
+    
+    # Другие
+    - copyloopvar       # Копирование переменных цикла (Go 1.22+)
+    - nilerr            # Проверка nil ошибок
+    - noctx             # Контекст в HTTP запросах
+    - nolintlint        # Проверка nolint директив
+
+  disable:
+    # Отключаем слишком строгие или неактуальные линтеры
+    - lll               # Длина строк (можно включить при необходимости)
+    - funlen            # Длина функций
+    - gochecknoglobals  # Глобальные переменные (у нас есть logger)
+    - gochecknoinits    # init функции
+
+# Настройки конкретных линтеров
+linters-settings:
+  # Цикломатическая сложность
+  gocyclo:
+    min-complexity: 15
+  
+  # Длина строк (если включен)
+  lll:
+    line-length: 120
+  
+  # Сортировка импортов
+  gci:
+    sections:
+      - standard
+      - default
+      - prefix(github.com/andro-kes/avito_test)
+  
+  # Критический анализ
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - dupImport # Разрешены дублирующиеся импорты для алиасов
+      - ifElseChain
+      - octalLiteral
+      - whyNoLint
+  
+  # Безопасность
+  gosec:
+    # Игнорируем предупреждения о слабых криптографических функциях (если не используются)
+    excludes:
+      - G401 # Использование слабых криптографических функций
+      - G501 # Импорт блокирующих функций
+  
+  # Документация
+  godot:
+    # Проверяем комментарии к экспортируемым функциям
+    scope: declarations
+    exclude:
+      - "^TODO:"
+      - "^FIXME:"
+  
+  # Дублирование кода
+  dupl:
+    threshold: 100
+  
+  # Предварительное выделение памяти
+  prealloc:
+    simple: true
+    range-loops: true
+    for-loops: false
+
+# Исключения (issues)
+issues:
+  # Максимальное количество проблем одного типа
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  
+  # Исключить директории
+  exclude-dirs:
+    - vendor
+    - build
+    - .git
+  
+  # Исключить файлы
+  exclude-files:
+    - ".*\\.pb\\.go$"
+    - ".*\\.gen\\.go$"
+  
+  # Исключить проблемы из старых коммитов
+  exclude-rules:
+    # Игнорируем ошибки в тестах для некоторых правил
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gosec
+        - dupl
+    
+    # Игнорируем некоторые предупреждения в миграциях
+    - path: migrations
+      text: ".*"
+    
+    # Игнорируем неиспользуемые импорты в некоторых случаях
+    - linters:
+        - unused
+      text: "github.com/.*/zap"
+  
+  # Не показывать проблемы в vendor
+  exclude:
+    - "Error return value of .((os\\.)?std(out|err)\\..*|.*Close|.*Flush|.*Write|.*Read|.*Seek|.*Print.*|.*Log.*|.*Fatal.*|.*Panic.*) is not checked"
+    - "exported function .* should have comment or be unexported"
+    - "package comment should be of the form"
+    - "comment on exported (function|method|type|const|var) .* should be of the form"
+    - "Error return value of `px\\.Rollback` is not checked" # Rollback в defer всегда вызывается
+
+# Настройки для конкретных файлов
+severity:
+  # Правила по умолчанию
+  default-severity: error
+  
+  # Правила для конкретных линтеров
+  case-sensitive: false
+

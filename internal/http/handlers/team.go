@@ -3,9 +3,10 @@ package handlers
 import (
 	"errors"
 
+	"github.com/gin-gonic/gin"
+
 	prerrors "github.com/andro-kes/avito_test/internal/errors"
 	"github.com/andro-kes/avito_test/internal/models"
-	"github.com/gin-gonic/gin"
 )
 
 func (hm *HandlerManager) AddTeam(c *gin.Context) {
@@ -39,20 +40,19 @@ func (hm *HandlerManager) AddTeam(c *gin.Context) {
 	c.JSON(201, newTeam)
 }
 
-
 func (hm *HandlerManager) GetTeam(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	name, ok := c.GetQuery("team_name") 
+	name, ok := c.GetQuery("team_name")
 	if !ok {
 		c.AbortWithStatusJSON(400, prerrors.ErrNotFound)
-		return 
+		return
 	}
 
 	team, err := hm.TeamService.GetTeam(ctx, name)
 	if err != nil {
 		c.AbortWithStatusJSON(400, prerrors.ErrNotFound)
-		return 
+		return
 	}
 
 	c.JSON(200, team)

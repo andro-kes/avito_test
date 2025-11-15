@@ -3,21 +3,22 @@ package service
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/andro-kes/avito_test/internal/models"
 	"github.com/andro-kes/avito_test/internal/repo"
 	"github.com/andro-kes/avito_test/internal/repo/db"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type UserService struct {
 	Repo repo.UserRepo
-	Tx db.Tx
+	Tx   db.Tx
 }
 
 func NewUserService(pool *pgxpool.Pool) *UserService {
 	return &UserService{
 		Repo: repo.NewUserRepo(pool),
-		Tx: db.NewTx(pool),
+		Tx:   db.NewTx(pool),
 	}
 }
 

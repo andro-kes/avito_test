@@ -13,7 +13,7 @@ func Admin() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if token == "" {
 			c.AbortWithStatusJSON(
-				http.StatusUnauthorized, 
+				http.StatusUnauthorized,
 				gin.H{"code": "INVALID_TOKEN", "message": "no admin token"},
 			)
 			return
@@ -21,21 +21,21 @@ func Admin() gin.HandlerFunc {
 		header := c.GetHeader("Authorization")
 		if header == "" {
 			c.AbortWithStatusJSON(
-				http.StatusUnauthorized, 
+				http.StatusUnauthorized,
 				gin.H{"code": "INVALID_TOKEN", "message": "no token header"},
 			)
 			return
 		}
 		if !strings.HasPrefix(header, "Bearer ") {
 			c.AbortWithStatusJSON(
-				http.StatusUnauthorized, 
+				http.StatusUnauthorized,
 				gin.H{"code": "INVALID_TOKEN", "message": "invalid token header"},
 			)
 			return
 		}
 		if strings.TrimSpace(strings.TrimPrefix(header, "Bearer ")) != token {
 			c.AbortWithStatusJSON(
-				http.StatusUnauthorized, 
+				http.StatusUnauthorized,
 				gin.H{"code": "INVALID_TOKEN", "message": "invalid token"},
 			)
 			return

@@ -4,10 +4,11 @@ import (
 	"context"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	prerrors "github.com/andro-kes/avito_test/internal/errors"
 	"github.com/andro-kes/avito_test/internal/models"
 	"github.com/andro-kes/avito_test/internal/repo/db"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type prRepo struct {
@@ -21,7 +22,10 @@ func NewPRRepo(pool *pgxpool.Pool) PRRepo {
 }
 
 func (p *prRepo) CreatePR(ctx context.Context, q db.Querier, pr *models.PullRequestShort, reviewers []string) (*models.PullRequest, error) {
-	const status = "OPEN"
+	status := "OPEN"
+	if pr.Status != "" {
+		status = pr.Status
+	}
 
 	sql := `
 	INSERT INTO pull_requests 
@@ -29,9 +33,9 @@ func (p *prRepo) CreatePR(ctx context.Context, q db.Querier, pr *models.PullRequ
 	VALUES 
     ($1, $2, $3, $4, $5, $6, $7)
 	RETURNING 
-    pull_request_id, pull_request_name, author_id, status, assigned_reviewers, created_at
+    pull_request_id, pull_request_name, author_id, status, assigned_reviewers, created_at, merged_at
 	`
-	
+
 	var pullRequest models.PullRequest
 	err := q.QueryRow(
 		ctx,
@@ -40,14 +44,14 @@ func (p *prRepo) CreatePR(ctx context.Context, q db.Querier, pr *models.PullRequ
 	).Scan(
 		&pullRequest.PullRequestId, &pullRequest.PullRequestName,
 		&pullRequest.AuthorId, &pullRequest.Status,
-		&pullRequest.AssignedReviewers, &pullRequest.CreatedAt,
+		&pullRequest.AssignedReviewers, &pullRequest.CreatedAt, &pullRequest.MergedAt,
 	)
 
 	return &pullRequest, err
 }
 
 func (p *prRepo) FindActiveReviewers(ctx context.Context, authorId string) ([]string, error) {
-    sql := `
+	sql := `
         SELECT user_id
         FROM users
         WHERE team_name = (
@@ -59,39 +63,39 @@ func (p *prRepo) FindActiveReviewers(ctx context.Context, authorId string) ([]st
         AND user_id <> $1
     `
 
-    rows, err := p.Pool.Query(ctx, sql, authorId)
-    if err != nil {
-        return nil, err
-    }
-    defer rows.Close()
+	rows, err := p.Pool.Query(ctx, sql, authorId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-    var active []string
-    for rows.Next() {
-        var id string
-        if err := rows.Scan(&id); err != nil {
-            return nil, err
-        }
-        active = append(active, id)
-    }
+	var active []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		active = append(active, id)
+	}
 
-    if err := rows.Err(); err != nil {
-        return nil, err
-    }
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 
-    return active, nil
+	return active, nil
 }
 
 func (p *prRepo) CheckExistingPR(ctx context.Context, id string) (bool, error) {
-    var exists bool
-    err := p.Pool.QueryRow(
-        ctx,
-        "SELECT EXISTS(SELECT 1 FROM pull_requests WHERE pull_request_id = $1)",
-        id,
-    ).Scan(&exists)
-    if err != nil {
-        return false, err
-    }
-    return exists, nil
+	var exists bool
+	err := p.Pool.QueryRow(
+		ctx,
+		"SELECT EXISTS(SELECT 1 FROM pull_requests WHERE pull_request_id = $1)",
+		id,
+	).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
 }
 
 func (p *prRepo) MergePR(ctx context.Context, id string) (*models.PullRequest, error) {
@@ -112,8 +116,8 @@ func (p *prRepo) MergePR(ctx context.Context, id string) (*models.PullRequest, e
 
 	var pr models.PullRequest
 	err := p.Pool.QueryRow(
-		ctx, 
-		sql, 
+		ctx,
+		sql,
 		id,
 	).Scan(
 		&pr.PullRequestId,
@@ -147,7 +151,7 @@ func (p *prRepo) IsMerged(ctx context.Context, id string) error {
 }
 
 func (p *prRepo) FindReplacementReviewers(ctx context.Context, prID, oldUserId string) ([]string, error) {
-    sql := `
+	sql := `
 	SELECT u.user_id
 	FROM users u
 	INNER JOIN users old_reviewer ON u.team_name = old_reviewer.team_name
@@ -159,26 +163,26 @@ func (p *prRepo) FindReplacementReviewers(ctx context.Context, prID, oldUserId s
 	AND u.user_id <> ALL(pr.assigned_reviewers)
     `
 
-    rows, err := p.Pool.Query(ctx, sql, prID, oldUserId)
-    if err != nil {
-        return nil, err
-    }
-    defer rows.Close()
+	rows, err := p.Pool.Query(ctx, sql, prID, oldUserId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-    var replace []string
-    for rows.Next() {
-        var id string
-        if err := rows.Scan(&id); err != nil {
-            return nil, err
-        }
-        replace = append(replace, id)
-    }
+	var replace []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		replace = append(replace, id)
+	}
 
-    if err := rows.Err(); err != nil {
-        return nil, err
-    }
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 
-    return replace, nil
+	return replace, nil
 }
 
 func (p *prRepo) ReassignReviewer(ctx context.Context, q db.Querier, prId, oldUserId, replacedBy string) (*models.PullRequest, error) {

@@ -9,7 +9,7 @@ import (
 )
 
 type Config struct {
-	ServerPort string
+	ServerPort      string
 	ShutdownTimeout time.Duration
 
 	DbURL string
@@ -24,13 +24,13 @@ func Init() *Config {
 	}
 
 	return &Config{
-		ServerPort: getEnvOrDefault("SERVE_PORT", "8080"),
-		ShutdownTimeout: time.Duration(t ) * time.Second,
-		DbURL: getEnvOrDefault("DB_URL", "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"),
+		ServerPort:      getEnvOrDefault("SERVE_PORT", "8080"),
+		ShutdownTimeout: time.Duration(t) * time.Second,
+		DbURL:           getEnvOrDefault("DB_URL", "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"),
 	}
 }
 
-func getEnvOrDefault(name, d string) string{
+func getEnvOrDefault(name, d string) string {
 	v := os.Getenv(name)
 	if v == "" {
 		return d

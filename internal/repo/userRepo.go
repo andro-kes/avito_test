@@ -3,9 +3,10 @@ package repo
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/andro-kes/avito_test/internal/models"
 	"github.com/andro-kes/avito_test/internal/repo/db"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type userRepo struct {
@@ -33,11 +34,11 @@ func (ur *userRepo) UpsertUser(ctx context.Context, q db.Querier, name string, m
 		sql,
 		m.UserID, m.Username, name, m.IsActive,
 	)
-	
+
 	return err
 }
 
-func (ur *userRepo) SetIsActive(ctx context.Context, q db.Querier, userId string, isActive bool)  error {
+func (ur *userRepo) SetIsActive(ctx context.Context, q db.Querier, userId string, isActive bool) error {
 	sql := `
 	UPDATE users
     SET is_active = $1
@@ -45,7 +46,7 @@ func (ur *userRepo) SetIsActive(ctx context.Context, q db.Querier, userId string
 	`
 
 	_, err := q.Exec(
-		ctx, 
+		ctx,
 		sql,
 		isActive, userId,
 	)
@@ -56,7 +57,7 @@ func (ur *userRepo) SetIsActive(ctx context.Context, q db.Querier, userId string
 func (ur *userRepo) GetUser(ctx context.Context, userId string) (*models.User, error) {
 	var user models.User
 	err := ur.Pool.QueryRow(
-		ctx, 
+		ctx,
 		"SELECT user_id, username, team_name, is_active FROM users WHERE user_id=$1",
 		userId,
 	).Scan(&user.UserId, &user.Username, &user.TeamName, &user.IsActive)

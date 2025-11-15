@@ -18,7 +18,6 @@ func New(code, message string) *Error {
 	}
 }
 
-
 var (
 	ErrTeamExists = New(
 		"TEAM_EXISTS",

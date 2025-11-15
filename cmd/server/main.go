@@ -8,14 +8,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/andro-kes/avito_test/internal/config"
-	"github.com/andro-kes/avito_test/internal/http/handlers"
-	"github.com/andro-kes/avito_test/internal/http/middleware"
-	"github.com/andro-kes/avito_test/internal/migrations"
-	logger "github.com/andro-kes/avito_test/internal/log"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
+
+	"github.com/andro-kes/avito_test/internal/config"
+	"github.com/andro-kes/avito_test/internal/http/handlers"
+	"github.com/andro-kes/avito_test/internal/http/middleware"
+	logger "github.com/andro-kes/avito_test/internal/log"
+	"github.com/andro-kes/avito_test/internal/migrations"
 )
 
 func main() {
@@ -68,11 +69,11 @@ func main() {
 	<-quit
 
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
-	defer func(){
+	defer func() {
 		cancel()
 		logger.Close()
 	}()
-	
+
 	if err := srv.Shutdown(ctx); err != nil {
 		logger.Log.Error("server forced to shutdown", zap.String("error", err.Error()))
 	}
@@ -81,8 +82,8 @@ func main() {
 func NewPool(ctx context.Context) (*pgxpool.Pool, error) {
 	dbURL := os.Getenv("DB_URL")
 	cfg, err := pgxpool.ParseConfig(dbURL)
-	if err != nil { 
-		return nil, err 
+	if err != nil {
+		return nil, err
 	}
 
 	cfg.MaxConns = 20
@@ -91,8 +92,8 @@ func NewPool(ctx context.Context) (*pgxpool.Pool, error) {
 	cfg.HealthCheckPeriod = 1 * time.Minute
 
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
-	if err != nil { 
-		return nil, err 
+	if err != nil {
+		return nil, err
 	}
 
 	pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -109,7 +110,7 @@ func NewPool(ctx context.Context) (*pgxpool.Pool, error) {
 		}
 		delay *= 2
 	}
-	
+
 	return pool, nil
 }
 

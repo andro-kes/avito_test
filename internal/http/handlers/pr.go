@@ -3,11 +3,12 @@ package handlers
 import (
 	"errors"
 
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+
 	prerrors "github.com/andro-kes/avito_test/internal/errors"
 	logger "github.com/andro-kes/avito_test/internal/log"
 	"github.com/andro-kes/avito_test/internal/models"
-	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
 )
 
 func (hm *HandlerManager) CreatePR(c *gin.Context) {
@@ -30,23 +31,22 @@ func (hm *HandlerManager) CreatePR(c *gin.Context) {
 		c.AbortWithStatusJSON(409, prerrors.ErrPRExists)
 		return
 	}
-	
-	new, err := hm.PRService.CreatePR(ctx, &pr)
+
+	createdPR, err := hm.PRService.CreatePR(ctx, &pr)
 	if err != nil {
 		logger.Log.Error("Server error", zap.Error(err))
-		c.AbortWithError(500, prerrors.ErrServer)
+		c.AbortWithStatusJSON(500, prerrors.ErrServer)
 		return
 	}
 
-	c.JSON(201, new)
+	c.JSON(201, createdPR)
 }
-
 
 func (hm *HandlerManager) MergePR(c *gin.Context) {
 	var pr models.PullRequestShort
 	if err := c.ShouldBindBodyWithJSON(&pr); err != nil {
 		c.AbortWithStatusJSON(404, prerrors.ErrNotFound)
-		return 
+		return
 	}
 
 	ctx := c.Request.Context()
@@ -91,11 +91,10 @@ func (hm *HandlerManager) ReassignReviewer(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{
-		"pr": pr,
+		"pr":          pr,
 		"replaced_by": replaced_by,
 	})
 }
-
 
 func (hm *HandlerManager) GetUserReview(c *gin.Context) {
 	userId := c.Query("user_id")
@@ -108,7 +107,7 @@ func (hm *HandlerManager) GetUserReview(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{
-		"user_id": userId,
+		"user_id":       userId,
 		"pull_requests": reviews,
 	})
 }

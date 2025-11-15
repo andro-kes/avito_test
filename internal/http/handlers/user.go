@@ -1,36 +1,37 @@
 package handlers
 
 import (
-	"github.com/andro-kes/avito_test/internal/models"
 	"github.com/gin-gonic/gin"
+
+	"github.com/andro-kes/avito_test/internal/models"
 )
 
 func (hm *HandlerManager) SetIsActive(c *gin.Context) {
 	var user models.User
 	if err := c.ShouldBindBodyWithJSON(&user); err != nil {
 		c.AbortWithStatusJSON(404, gin.H{
-			"code": "NOT_FOUND",
+			"code":    "NOT_FOUND",
 			"message": "user not found",
 		})
-		return 
+		return
 	}
 
 	ctx := c.Request.Context()
 	if err := hm.UserService.SetIsActive(ctx, user.UserId, user.IsActive); err != nil {
 		c.AbortWithStatusJSON(404, gin.H{
-			"code": "NOT_FOUND",
+			"code":    "NOT_FOUND",
 			"message": "user not found",
 		})
-		return 
+		return
 	}
 
 	updatedUser, err := hm.UserService.GetUser(ctx, user.UserId)
 	if err != nil {
 		c.AbortWithStatusJSON(404, gin.H{
-			"code": "NOT_FOUND",
+			"code":    "NOT_FOUND",
 			"message": "user not found",
 		})
-		return 
+		return
 	}
 
 	c.JSON(200, updatedUser)

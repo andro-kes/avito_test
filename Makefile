@@ -42,7 +42,7 @@ lint: ## Запустить линтер
 		echo "$(YELLOW)Установка golangci-lint...$(NC)"; \
 		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin v1.55.2; \
 	fi
-	$(GO_LINT) run ./...
+	$(GO_LINT) run --config .golangci.yml ./...
 	@echo "$(GREEN)Линтинг завершен!$(NC)"
 
 lint-fix: ## Исправить ошибки линтера автоматически
@@ -51,7 +51,7 @@ lint-fix: ## Исправить ошибки линтера автоматиче
 		echo "$(YELLOW)Установка golangci-lint...$(NC)"; \
 		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin v1.55.2; \
 	fi
-	$(GO_LINT) run --fix ./...
+	$(GO_LINT) run --fix --config .golangci.yml ./...
 	@echo "$(GREEN)Исправления применены!$(NC)"
 
 clean: ## Очистить артефакты сборки

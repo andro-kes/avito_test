@@ -6,24 +6,25 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+	"go.uber.org/zap"
+
 	prerrors "github.com/andro-kes/avito_test/internal/errors"
 	logger "github.com/andro-kes/avito_test/internal/log"
 	"github.com/andro-kes/avito_test/internal/models"
 	"github.com/andro-kes/avito_test/internal/repo"
 	"github.com/andro-kes/avito_test/internal/repo/db"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"go.uber.org/zap"
 )
 
 type PRService struct {
 	Repo repo.PRRepo
-	Tx db.Tx
+	Tx   db.Tx
 }
 
 func NewPRService(pool *pgxpool.Pool) *PRService {
 	return &PRService{
 		Repo: repo.NewPRRepo(pool),
-		Tx: db.NewTx(pool),
+		Tx:   db.NewTx(pool),
 	}
 }
 
@@ -35,7 +36,7 @@ func (ps *PRService) CreatePR(ctx context.Context, pr *models.PullRequestShort) 
 			return err
 		}
 		logger.Log.Info(fmt.Sprintf("Найдено %d кандидатов в ревьюеры", len(activeReviewers)))
-		
+
 		reviewers := random(activeReviewers)
 		logger.Log.Info(
 			fmt.Sprintf("Назначено %d ревьюера", len(reviewers)),
@@ -63,10 +64,12 @@ func random(r []string) []string {
 		return r
 	}
 
+	// Для выбора ревьюверов math/rand достаточно, не требуется криптографическая стойкость
+	//nolint:gosec // G404: Use of weak random number generator is acceptable for non-security purposes
 	rd := rand.New(rand.NewSource(time.Now().UnixNano()))
-    rd.Shuffle(len(r), func(i, j int) {
-        r[i], r[j] = r[j], r[i]
-    })
+	rd.Shuffle(len(r), func(i, j int) {
+		r[i], r[j] = r[j], r[i]
+	})
 
 	return r[:2]
 }

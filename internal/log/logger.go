@@ -8,15 +8,15 @@ var Log *zap.Logger
 
 func Init() {
 	config := zap.NewProductionConfig()
-    config.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
+	config.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
 
-    logger, err := config.Build()
-    if err != nil {
-        panic(map[string]any{
-			"code": "FAILED_LOGGER",
+	logger, err := config.Build()
+	if err != nil {
+		panic(map[string]any{
+			"code":    "FAILED_LOGGER",
 			"message": err.Error(),
 		})
-    }
+	}
 
 	Log = logger
 }
