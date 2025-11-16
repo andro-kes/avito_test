@@ -82,42 +82,42 @@ func main() {
 }
 
 func NewPool(ctx context.Context) (*pgxpool.Pool, error) {
-    dbURL := os.Getenv("DB_URL")
-    cfg, err := pgxpool.ParseConfig(dbURL)
-    if err != nil {
-        return nil, err
-    }
+	dbURL := os.Getenv("DB_URL")
+	cfg, err := pgxpool.ParseConfig(dbURL)
+	if err != nil {
+		return nil, err
+	}
 
-    cfg.MaxConns = 20
-    cfg.MinConns = 2
-    cfg.MaxConnLifetime = 30 * time.Minute
-    cfg.HealthCheckPeriod = 1 * time.Minute
+	cfg.MaxConns = 20
+	cfg.MinConns = 2
+	cfg.MaxConnLifetime = 30 * time.Minute
+	cfg.HealthCheckPeriod = 1 * time.Minute
 
-    pool, err := pgxpool.NewWithConfig(ctx, cfg)
-    if err != nil {
-        return nil, err
-    }
+	pool, err := pgxpool.NewWithConfig(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
 
-    attempts := 3
-    delay := time.Second
-    for i := 0; i < attempts; i++ {
-        pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-        err := pool.Ping(pingCtx)
-        cancel()
-        if err == nil {
-            return pool, nil
-        }
-        time.Sleep(delay)
-        delay *= 2
-    }
+	attempts := 3
+	delay := time.Second
+	for i := 0; i < attempts; i++ {
+		pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		err := pool.Ping(pingCtx)
+		cancel()
+		if err == nil {
+			return pool, nil
+		}
+		time.Sleep(delay)
+		delay *= 2
+	}
 
-    pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-    defer cancel()
-    if err := pool.Ping(pingCtx); err != nil {
-        pool.Close()
-        return nil, err
-    }
-    return pool, nil
+	pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	if err := pool.Ping(pingCtx); err != nil {
+		pool.Close()
+		return nil, err
+	}
+	return pool, nil
 }
 
 func applyMigrations(ctx context.Context, pool *pgxpool.Pool) error {

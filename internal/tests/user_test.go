@@ -2,12 +2,14 @@ package tests
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"testing"
 
-	"github.com/andro-kes/avito_test/internal/models"
 	"github.com/stretchr/testify/require"
+
+	"github.com/andro-kes/avito_test/internal/models"
 )
 
 func TestSetIsActive(t *testing.T) {
@@ -21,17 +23,30 @@ func TestSetIsActive(t *testing.T) {
 		},
 	}
 	body, _ := json.Marshal(team)
-	resp, err := http.Post(baseURL+"/team/add/", "application/json", bytes.NewReader(body))
+
+	req, err := http.NewRequestWithContext(context.Background(), "POST", baseURL+"/team/add/", bytes.NewReader(body))
 	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
 	require.Equal(t, 201, resp.StatusCode)
 
 	setActiveBody := map[string]any{
-		"user_id":  "u2",
+		"user_id":   "u2",
 		"is_active": false,
 	}
 	body, _ = json.Marshal(setActiveBody)
-	resp, err = http.Post(baseURL+"/users/set_is_active/", "application/json", bytes.NewReader(body))
+
+	req, err = http.NewRequestWithContext(context.Background(), "POST", baseURL+"/users/set_is_active/", bytes.NewReader(body))
 	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err = client.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
 	require.Equal(t, 200, resp.StatusCode)
 
 	var result map[string]models.User
@@ -42,6 +57,7 @@ func TestSetIsActive(t *testing.T) {
 
 func TestCountReview(t *testing.T) {
 	baseURL, _, _ := SetupTest(t)
+	client := &http.Client{}
 
 	team := map[string]any{
 		"team_name": "backend",
@@ -51,8 +67,14 @@ func TestCountReview(t *testing.T) {
 		},
 	}
 	body, _ := json.Marshal(team)
-	resp, err := http.Post(baseURL+"/team/add/", "application/json", bytes.NewReader(body))
+
+	req, err := http.NewRequestWithContext(context.Background(), "POST", baseURL+"/team/add/", bytes.NewReader(body))
 	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
 	require.Equal(t, 201, resp.StatusCode)
 
 	pr := map[string]any{
@@ -61,12 +83,22 @@ func TestCountReview(t *testing.T) {
 		"author_id":         "u1",
 	}
 	body, _ = json.Marshal(pr)
-	resp, err = http.Post(baseURL+"/pullRequest/create/", "application/json", bytes.NewReader(body))
+
+	req, err = http.NewRequestWithContext(context.Background(), "POST", baseURL+"/pullRequest/create/", bytes.NewReader(body))
 	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err = client.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
 	require.Equal(t, 201, resp.StatusCode)
 
-	resp, err = http.Get(baseURL + "/users/countReview/?user_id=u3")
+	req, err = http.NewRequestWithContext(context.Background(), "GET", baseURL+"/users/countReview/?user_id=u3", http.NoBody)
 	require.NoError(t, err)
+
+	resp, err = client.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
 	require.Equal(t, 200, resp.StatusCode)
 
 	var countResult map[string]any
@@ -78,6 +110,7 @@ func TestCountReview(t *testing.T) {
 
 func TestDeactivateUsers(t *testing.T) {
 	baseURL, _, _ := SetupTest(t)
+	client := &http.Client{}
 
 	team := map[string]any{
 		"team_name": "backend",
@@ -87,20 +120,33 @@ func TestDeactivateUsers(t *testing.T) {
 		},
 	}
 	body, _ := json.Marshal(team)
-	resp, err := http.Post(baseURL+"/team/add/", "application/json", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(context.Background(), "POST", baseURL+"/team/add/", bytes.NewReader(body))
 	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	defer resp.Body.Close()
 	require.Equal(t, 201, resp.StatusCode)
 
 	deactivateBody := map[string]any{
 		"user_ids": []string{"u3"},
 	}
 	body, _ = json.Marshal(deactivateBody)
-	resp, err = http.Post(baseURL+"/users/deactivate/", "application/json", bytes.NewReader(body))
+	req, err = http.NewRequestWithContext(context.Background(), "POST", baseURL+"/users/deactivate/", bytes.NewReader(body))
 	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err = client.Do(req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	defer resp.Body.Close()
 	require.Equal(t, 200, resp.StatusCode)
 
-	var deactivateResp string
-	err = json.NewDecoder(resp.Body).Decode(&deactivateResp)
+	var result map[string][]string
+	err = json.NewDecoder(resp.Body).Decode(&result)
 	require.NoError(t, err)
-	require.Equal(t, "SUCCESS!", deactivateResp)
+
+	require.Equal(t, []string{"u3"}, result["deactivated"])
 }

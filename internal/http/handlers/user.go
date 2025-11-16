@@ -93,5 +93,7 @@ func (hm *HandlerManager) DeactivateUsers(c *gin.Context) {
 		}
 	}
 
-	c.JSON(200, "SUCCESS!")
+	c.JSON(200, gin.H{
+		"deactivated": ids.UserIds,
+	})
 }

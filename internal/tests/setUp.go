@@ -41,7 +41,9 @@ func SetupTest(t *testing.T) (baseURL string, db *pgxpool.Pool, router *gin.Engi
 		hc.RestartPolicy = docker.RestartPolicy{Name: "no"}
 	})
 	require.NoError(t, err)
-	resource.Expire(900)
+	if err := resource.Expire(900); err != nil {
+		t.Fatal(err)
+	}
 
 	hostPort := resource.GetHostPort("5432/tcp")
 	dsn := fmt.Sprintf("postgres://pgtest:pgtest@%s/pgtest?sslmode=disable", hostPort)
@@ -84,10 +86,12 @@ func SetupTest(t *testing.T) (baseURL string, db *pgxpool.Pool, router *gin.Engi
 	ts := httptest.NewServer(router)
 
 	t.Cleanup(func() {
-        ts.Close()
-        if db != nil { db.Close() }
-        _ = pool.Purge(resource)
-    })
+		ts.Close()
+		if db != nil {
+			db.Close()
+		}
+		_ = pool.Purge(resource)
+	})
 
 	return ts.URL, db, router
 }

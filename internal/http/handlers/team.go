@@ -47,13 +47,13 @@ func (hm *HandlerManager) GetTeam(c *gin.Context) {
 
 	name, ok := c.GetQuery("team_name")
 	if !ok {
-		c.AbortWithStatusJSON(400, prerrors.ErrNotFound)
+		c.AbortWithStatusJSON(404, prerrors.ErrNotFound)
 		return
 	}
 
 	team, err := hm.TeamService.GetTeam(ctx, name)
 	if err != nil {
-		c.AbortWithStatusJSON(400, prerrors.ErrNotFound)
+		c.AbortWithStatusJSON(404, prerrors.ErrNotFound)
 		return
 	}
 
