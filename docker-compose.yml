@@ -24,7 +24,7 @@ services:
       dockerfile: Dockerfile
     container_name: avito_api
     environment:
-      DB_URL: ${DB_URL:-postgres://postgres:postgres@postgres:5432/pr_db?sslmode=disable}
+      DB_URL: ${DB_URL:-postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable}
       SERVE_PORT: 8080
       SHUTDOWN_TIMEOUT: 5
       ADMIN_TOKEN: ${ADMIN_TOKEN:-admin-token-123}
