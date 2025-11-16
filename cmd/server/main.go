@@ -42,7 +42,7 @@ func main() {
 	team.GET("get/", handlerManager.GetTeam)
 
 	user := router.Group("/users/")
-	user.POST("set_is_active/", middleware.Admin(), handlerManager.SetIsActive)
+	user.POST("setIsActive/", middleware.Admin(), handlerManager.SetIsActive)
 	user.GET("getReview/", handlerManager.GetUserReview)
 	user.GET("countReview/", handlerManager.CountReview)
 	user.POST("deactivate/", handlerManager.DeactivateUsers)

@@ -2,9 +2,9 @@ package service
 
 import (
 	"context"
-	"crypto/rand"
+	"math/rand"
 	"fmt"
-	"math/big"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
@@ -60,24 +60,23 @@ func (ps *PRService) CreatePR(ctx context.Context, pr *models.PullRequestShort) 
 }
 
 func random(r []string, n int) []string {
-	if len(r) <= 2 {
-		return r
+	if len(r) == 0 {
+		return []string{}
 	}
 
-	for i := len(r) - 1; i > 0; i-- {
-		jBig, err := rand.Int(rand.Reader, big.NewInt(int64(i+1)))
-		if err != nil {
-			continue
-		}
-		j := int(jBig.Int64())
-		r[i], r[j] = r[j], r[i]
+	if len(r) <= n {
+		rd := rand.New(rand.NewSource(time.Now().UnixNano()))
+		rd.Shuffle(len(r), func(i, j int) { r[i], r[j] = r[j], r[i] })
+		out := make([]string, len(r))
+		copy(out, r)
+		return out
 	}
 
-	if n > len(r) {
-		return r
-	}
-
-	return r[:n]
+	rd := rand.New(rand.NewSource(time.Now().UnixNano()))
+	rd.Shuffle(len(r), func(i, j int) { r[i], r[j] = r[j], r[i] })
+	out := make([]string, n)
+	copy(out, r[:n])
+	return out
 }
 
 func (ps *PRService) CheckExistingPR(ctx context.Context, id string) (bool, error) {

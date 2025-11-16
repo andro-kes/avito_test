@@ -26,14 +26,17 @@ func (p *prRepo) CreatePR(ctx context.Context, q db.Querier, pr *models.PullRequ
 	if pr.Status != "" {
 		status = pr.Status
 	}
+	if reviewers == nil {
+		reviewers = make([]string, 0)
+	}
 
 	sql := `
-	INSERT INTO pull_requests 
+	INSERT INTO pull_requests
     (pull_request_id, pull_request_name, author_id, status, assigned_reviewers, created_at, merged_at)
-	VALUES 
-    ($1, $2, $3, $4, $5, $6, $7)
+    VALUES
+    ($1, $2, $3, $4, COALESCE($5::text[], '{}'), $6, $7)
 	RETURNING 
-    pull_request_id, pull_request_name, author_id, status, assigned_reviewers, created_at, merged_at
+	pull_request_id, pull_request_name, author_id, status, assigned_reviewers, created_at, merged_at;
 	`
 
 	var pullRequest models.PullRequest

@@ -17,8 +17,8 @@
 
 1. Клонируйте репозиторий:
 ```bash
-git clone <repository-url>
-cd avito
+git clone https://github.com/andro-kes/avito_test.git
+cd avito_test
 ```
 
 2. Создайте файл `.env` на основе `.env.example`:
@@ -103,6 +103,8 @@ go run cmd/server/main.go
 
 - `POST /users/setIsActive` - Установить флаг активности пользователя (требует ADMIN_TOKEN)
 - `GET /users/getReview?user_id=<id>` - Получить PR'ы, где пользователь назначен ревьювером
+- `POST /users/deactivate/` - Деактивировать несколько юзеров и переназначить PR'ы
+- `GET /users/countReview/user_id=<id>` - Возвращает количество PR, в которых ревьюер - пользователь
 
 ### Pull Requests
 
@@ -114,15 +116,33 @@ go run cmd/server/main.go
 
 ## Переменные окружения
 
-| Переменная | Описание | Значение по умолчанию |
-|------------|----------|----------------------|
-| `DB_URL` | URL подключения к PostgreSQL | `postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable` |
-| `SERVE_PORT` | Порт для HTTP сервера | `8080` |
-| `SHUTDOWN_TIMEOUT` | Таймаут graceful shutdown (секунды) | `5` |
-| `ADMIN_TOKEN` | Токен для админских операций (используется в заголовке `Authorization: Bearer <token>`) | - |
-| `POSTGRES_USER` | Пользователь PostgreSQL (для docker-compose) | `postgres` |
-| `POSTGRES_PASSWORD` | Пароль PostgreSQL (для docker-compose) | `postgres` |
-| `POSTGRES_DB` | Имя базы данных (для docker-compose) | `postgres` | 
+### DB_URL
+**Описание:** URL подключения к PostgreSQL  
+**Значение по умолчанию:** `postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable`
+
+### SERVE_PORT  
+**Описание:** Порт для HTTP сервера  
+**Значение по умолчанию:** `8080`
+
+### SHUTDOWN_TIMEOUT
+**Описание:** Таймаут graceful shutdown в секундах  
+**Значение по умолчанию:** `5`
+
+### ADMIN_TOKEN
+**Описание:** Токен для админских операций (используется в заголовке `Authorization: Bearer <token>`)  
+**Значение по умолчанию:** *не установлен*
+
+### POSTGRES_USER
+**Описание:** Пользователь PostgreSQL (для docker-compose)  
+**Значение по умолчанию:** `postgres`
+
+### POSTGRES_PASSWORD  
+**Описание:** Пароль PostgreSQL (для docker-compose)  
+**Значение по умолчанию:** `postgres`
+
+### POSTGRES_DB
+**Описание:** Имя базы данных (для docker-compose)  
+**Значение по умолчанию:** `postgres`
 
 ## Makefile команды
 
@@ -188,13 +208,15 @@ make docker-restart # Перезапустить docker-compose
 
 **Решение:** Миграции встроены в бинарник через `embed.FS` и применяются автоматически при старте сервиса. Это упрощает развертывание и гарантирует актуальность схемы БД.
 
-### 6. Формат дат в ответах API
-
-**Вопрос:** Нужно ли возвращать `createdAt` и `mergedAt` в ответах?
-
-**Решение:** Поля `createdAt` и `mergedAt` определены в модели, но в текущей реализации не всегда возвращаются в ответах.
-
 ## Тестирование
+
+Реализовано интеграционное тестирование для всех хэндлеров
+Запуск: go test ./... -v
+
+## Нагрузочное тестирование
+
+Результаты можно посмотреть в файле k6_report.html
+Запуск: chmod +x run_test.sh && ./run_test.sh
 
 ### Примеры запросов
 
@@ -349,6 +371,10 @@ docker compose down
 ```bash
 docker compose down -v
 ```
+
+## CHECKLIST
+
+Можно ознакомиться в файле docs/CHECKLIST.md
 
 ## Лицензия
 
