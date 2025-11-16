@@ -67,7 +67,6 @@ func (ur *userRepo) GetUser(ctx context.Context, userId string) (*models.User, e
 }
 
 func (ur *userRepo) CountReview(ctx context.Context, userId string) (int, error) {
-	// Проверяем существование пользователя
 	var exists bool
 	err := ur.Pool.QueryRow(
 		ctx,
@@ -98,4 +97,14 @@ func (ur *userRepo) CountReview(ctx context.Context, userId string) (int, error)
 	}
 
 	return cnt, nil
+}
+
+func (ur *userRepo) DeactivateUsers(ctx context.Context, q db.Querier, userIds []string) error {
+	_, err := q.Exec(
+		ctx,
+		"UPDATE users SET is_active = false WHERE user_id = ANY($1)",
+		userIds,
+	)
+	
+	return err
 }

@@ -13,9 +13,11 @@ type PRRepo interface {
 	CheckExistingPR(ctx context.Context, id string) (bool, error)
 	MergePR(ctx context.Context, id string) (*models.PullRequest, error)
 	IsMerged(ctx context.Context, id string) error
-	FindReplacementReviewers(ctx context.Context, prID, oldUserId string) ([]string, error)
+	FindReplacementReviewers(ctx context.Context, prID string, oldUserId []string) ([]string, error)
 	GetReview(ctx context.Context, userId string) ([]models.PullRequestShort, error)
 	ReassignReviewer(ctx context.Context, q db.Querier, prId, oldUserId, replacedBy string) (*models.PullRequest, error)
+	GetListByUsers(ctx context.Context, ids []string) ([]models.PullRequest, error)
+	ChangeDeactivatedReviewers(ctx context.Context, q db.Querier, prId string, replaced []string) error
 }
 
 type TeamRepo interface {
@@ -29,4 +31,5 @@ type UserRepo interface {
 	SetIsActive(ctx context.Context, q db.Querier, userId string, isActive bool) error
 	CountReview(ctx context.Context, userId string) (int, error)
 	UpsertUser(ctx context.Context, q db.Querier, name string, m models.TeamMember) error
+	DeactivateUsers(ctx context.Context, q db.Querier, userIds []string) error
 }

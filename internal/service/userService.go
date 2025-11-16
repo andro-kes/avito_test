@@ -35,3 +35,9 @@ func (us *UserService) GetUser(ctx context.Context, userId string) (*models.User
 func (us *UserService) CountReview(ctx context.Context, userId string) (int, error) {
 	return us.Repo.CountReview(ctx, userId)
 }
+
+func (us *UserService) DeactivateUsers(ctx context.Context, userIds []string) error {
+	return us.Tx.RunInTx(ctx, func(ctx context.Context, q db.Querier) error {
+		return us.Repo.DeactivateUsers(ctx, q, userIds)
+	})
+}

@@ -56,3 +56,41 @@ func (hm *HandlerManager) CountReview(c *gin.Context) {
 		"reviews": cnt,
 	})
 }
+
+type deactivatedRequest struct {
+	UserIds []string `json:"user_ids"`
+}
+func (hm *HandlerManager) DeactivateUsers(c *gin.Context) {
+	var ids deactivatedRequest
+	if err := c.ShouldBindJSON(&ids); err != nil {
+		c.AbortWithStatusJSON(400, prerrors.ErrNotFound)
+		return
+	}
+
+	if len(ids.UserIds) == 0 {
+		c.AbortWithStatusJSON(400, prerrors.ErrNotFound)
+		return
+	}
+
+	ctx := c.Request.Context()
+	err := hm.UserService.DeactivateUsers(ctx, ids.UserIds)
+	if err != nil {
+		c.AbortWithStatusJSON(500, prerrors.ErrServer)
+		return
+	}
+
+	prsMap, err := hm.PRService.GetListByUsers(ctx, ids.UserIds)
+	if err != nil {
+		c.AbortWithStatusJSON(500, prerrors.ErrServer)
+		return
+	}
+	for _, pr := range prsMap {
+		err := hm.PRService.ReassignDeactivatedUsers(ctx, &pr, ids.UserIds)
+		if err != nil {
+			c.AbortWithStatusJSON(500, prerrors.ErrServer)
+			return
+		}
+	}
+
+	c.JSON(200, "SUCCESS!")
+}

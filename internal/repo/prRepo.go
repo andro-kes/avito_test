@@ -150,16 +150,16 @@ func (p *prRepo) IsMerged(ctx context.Context, id string) error {
 	return nil
 }
 
-func (p *prRepo) FindReplacementReviewers(ctx context.Context, prID, oldUserId string) ([]string, error) {
+func (p *prRepo) FindReplacementReviewers(ctx context.Context, prID string, oldUserId []string) ([]string, error) {
 	sql := `
 	SELECT u.user_id
 	FROM users u
 	INNER JOIN users old_reviewer ON u.team_name = old_reviewer.team_name
 	INNER JOIN pull_requests pr ON pr.pull_request_id = $1
-	WHERE old_reviewer.user_id = $2
+	WHERE old_reviewer.user_id = ANY($2)
 	AND u.is_active = TRUE
 	AND u.user_id <> pr.author_id
-	AND u.user_id <> $2
+	AND u.user_id <> ALL($2)
 	AND u.user_id <> ALL(pr.assigned_reviewers)
     `
 
@@ -261,4 +261,42 @@ func (p *prRepo) GetReview(ctx context.Context, userId string) ([]models.PullReq
 	}
 
 	return prs, nil
+}
+
+func (p *prRepo) GetListByUsers(ctx context.Context, ids []string) ([]models.PullRequest, error) {
+	const sql = `
+	SELECT pull_request_id, assigned_reviewers, author_id 
+	FROM pull_requests 
+	WHERE status='OPEN' AND assigned_reviewers && $1::text[]
+	`
+
+	prs := make([]models.PullRequest, 0)
+	rows, err := p.Pool.Query(ctx, sql, ids)
+	if err != nil {
+		return prs, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var pr models.PullRequest
+		var assigned []string
+		if err := rows.Scan(&pr.PullRequestId, &assigned, &pr.AuthorId); err != nil {
+			return prs, err
+		}
+		pr.AssignedReviewers = assigned
+		prs = append(prs, pr)
+	}
+
+	return prs, nil
+}
+
+func (p *prRepo) ChangeDeactivatedReviewers(ctx context.Context, q db.Querier, prId string, replaced []string) error {
+	_, err := q.Exec(
+		ctx,
+		"UPDATE pull_requests SET assigned_reviewers = $1 WHERE pull_request_id = $2",
+		replaced,
+		prId,
+	)
+
+	return err
 }

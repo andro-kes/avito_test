@@ -37,7 +37,7 @@ func (ps *PRService) CreatePR(ctx context.Context, pr *models.PullRequestShort) 
 		}
 		logger.Log.Info(fmt.Sprintf("Найдено %d кандидатов в ревьюеры", len(activeReviewers)))
 
-		reviewers := random(activeReviewers)
+		reviewers := random(activeReviewers, 2)
 		logger.Log.Info(
 			fmt.Sprintf("Назначено %d ревьюера", len(reviewers)),
 			zap.Any("reviewers", reviewers),
@@ -59,19 +59,17 @@ func (ps *PRService) CreatePR(ctx context.Context, pr *models.PullRequestShort) 
 	return pullRequest, nil
 }
 
-func random(r []string) []string {
+func random(r []string, n int) []string {
 	if len(r) <= 2 {
 		return r
 	}
 
-	// Для выбора ревьюверов math/rand достаточно, не требуется криптографическая стойкость
-	//nolint:gosec // G404: Use of weak random number generator is acceptable for non-security purposes
 	rd := rand.New(rand.NewSource(time.Now().UnixNano()))
 	rd.Shuffle(len(r), func(i, j int) {
 		r[i], r[j] = r[j], r[i]
 	})
 
-	return r[:2]
+	return r[:n]
 }
 
 func (ps *PRService) CheckExistingPR(ctx context.Context, id string) (bool, error) {
@@ -90,7 +88,7 @@ func (ps *PRService) ReassignReviewer(ctx context.Context, prId, oldUserId strin
 	var pr *models.PullRequest
 	var replacedBy string
 	err := ps.Tx.RunInTx(ctx, func(ctx context.Context, q db.Querier) error {
-		replacement, err := ps.Repo.FindReplacementReviewers(ctx, prId, oldUserId)
+		replacement, err := ps.Repo.FindReplacementReviewers(ctx, prId, []string{oldUserId})
 		if err != nil {
 			return err
 		}
@@ -99,7 +97,7 @@ func (ps *PRService) ReassignReviewer(ctx context.Context, prId, oldUserId strin
 			return prerrors.ErrNoCandidate
 		}
 
-		replacedBy = random(replacement)[0]
+		replacedBy = random(replacement, 1)[0]
 		pr, err = ps.Repo.ReassignReviewer(ctx, q, prId, oldUserId, replacedBy)
 		return err
 	})
@@ -107,6 +105,78 @@ func (ps *PRService) ReassignReviewer(ctx context.Context, prId, oldUserId strin
 	return pr, replacedBy, err
 }
 
-func (us *PRService) GetReview(ctx context.Context, userId string) ([]models.PullRequestShort, error) {
-	return us.Repo.GetReview(ctx, userId)
+func (ps *PRService) GetReview(ctx context.Context, userId string) ([]models.PullRequestShort, error) {
+	return ps.Repo.GetReview(ctx, userId)
+}
+
+func (ps *PRService) GetListByUsers(ctx context.Context, ids []string) (map[string]models.PullRequest, error) {
+	prsMap := make(map[string]models.PullRequest)
+	prs, err := ps.Repo.GetListByUsers(ctx, ids)
+	if err != nil {
+		return prsMap, err
+	}
+
+	for _, pr := range prs {
+		prsMap[pr.PullRequestId] = pr
+	}
+
+	return prsMap, nil
+}
+
+func (ps *PRService) ReassignDeactivatedUsers(ctx context.Context, pr *models.PullRequest, ids []string) error {
+	return ps.Tx.RunInTx(ctx, func(ctx context.Context, q db.Querier) error {
+		replacement, err := ps.Repo.FindReplacementReviewers(ctx, pr.PullRequestId, ids)
+		if err != nil {
+			return err
+		}
+
+		if len(replacement) == 0 {
+			return prerrors.ErrNoCandidate
+		}
+
+		replaced := random(replacement, len(replacement))
+
+		deactivated := make(map[string]struct{}, len(ids))
+		for _, u := range ids {
+			deactivated[u] = struct{}{}
+		}
+
+		used := make(map[string]struct{}, 0)
+		for _, u := range pr.AssignedReviewers {
+			if _, ok := deactivated[u]; !ok {
+				used[u] = struct{}{}
+			}
+		}
+		used[pr.AuthorId] = struct{}{}
+
+		repIdx := 0
+		nextReplacement := func() (string, bool) {
+			for repIdx < len(replaced) {
+				c := replaced[repIdx]
+				repIdx++
+				if _, d := deactivated[c]; d {
+					continue
+				}
+				if _, u := used[c]; u {
+					continue
+				}
+				used[c] = struct{}{}
+				return c, true
+			}
+			return "", false
+		}
+
+		newAssigned := make([]string, 0, len(pr.AssignedReviewers))
+		for _, r := range pr.AssignedReviewers {
+			if _, d := deactivated[r]; !d {
+				newAssigned = append(newAssigned, r)
+				continue
+			}
+			if cand, ok := nextReplacement(); ok {
+				newAssigned = append(newAssigned, cand)
+			}
+		}
+
+		return ps.Repo.ChangeDeactivatedReviewers(ctx, q, pr.PullRequestId, newAssigned)
+	})
 }
