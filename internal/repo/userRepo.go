@@ -105,6 +105,6 @@ func (ur *userRepo) DeactivateUsers(ctx context.Context, q db.Querier, userIds [
 		"UPDATE users SET is_active = false WHERE user_id = ANY($1)",
 		userIds,
 	)
-	
+
 	return err
 }

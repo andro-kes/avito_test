@@ -2,9 +2,9 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
-	"math/rand"
-	"time"
+	"math/big"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
@@ -64,10 +64,18 @@ func random(r []string, n int) []string {
 		return r
 	}
 
-	rd := rand.New(rand.NewSource(time.Now().UnixNano()))
-	rd.Shuffle(len(r), func(i, j int) {
+	for i := len(r) - 1; i > 0; i-- {
+		jBig, err := rand.Int(rand.Reader, big.NewInt(int64(i+1)))
+		if err != nil {
+			continue
+		}
+		j := int(jBig.Int64())
 		r[i], r[j] = r[j], r[i]
-	})
+	}
+
+	if n > len(r) {
+		return r
+	}
 
 	return r[:n]
 }

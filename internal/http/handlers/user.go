@@ -60,6 +60,7 @@ func (hm *HandlerManager) CountReview(c *gin.Context) {
 type deactivatedRequest struct {
 	UserIds []string `json:"user_ids"`
 }
+
 func (hm *HandlerManager) DeactivateUsers(c *gin.Context) {
 	var ids deactivatedRequest
 	if err := c.ShouldBindJSON(&ids); err != nil {
