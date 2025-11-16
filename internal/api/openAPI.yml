@@ -458,3 +458,71 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+  /users/deactivate:
+  post:
+    summary: Деактивирует нескольких пользователей и заменяет их в PR
+    description: Деактивирует нескольких пользователей и заменяет их в PR
+      - Users
+    security:
+      - BearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - user_ids
+            properties:
+              user_ids:
+                type: array
+                description: List of user IDs to deactivate
+                items:
+                  type: string
+                  example: "user_123"
+                minItems: 1
+            example:
+              user_ids: ["user_123", "user_456", "user_789"]
+    responses:
+      '200':
+        description: Users successfully deactivated and PRs reassigned
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                deactivated:
+                  type: array
+                  description: List of successfully deactivated user IDs
+                  items:
+                    type: string
+                  example: ["user_123", "user_456", "user_789"]
+            example:
+              deactivated: ["user_123", "user_456", "user_789"]
+      '400':
+        description: Bad request - invalid input data
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Error'
+            example:
+              code: "NOT_FOUND"
+              message: "invalid request data"
+      '401':
+        description: Unauthorized - missing or invalid admin token
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Error'
+            example:
+              code: "UNAUTHORIZED"
+              message: "admin token required"
+      '500':
+        description: Internal server error during deactivation or reassignment
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Error'
+            example:
+              code: "SERVER_ERROR"
+              message: "internal server error"
