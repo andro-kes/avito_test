@@ -73,6 +73,8 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer func() {
 		cancel()
+		logger.Log.Info("closing database connections")
+		pool.Close()
 		logger.Close()
 	}()
 
