@@ -11,7 +11,7 @@ import (
 
 func (hm *HandlerManager) SetIsActive(c *gin.Context) {
 	var user models.User
-	if err := c.ShouldBindBodyWithJSON(&user); err != nil {
+	if err := c.ShouldBindJSON(&user); err != nil {
 		c.AbortWithStatusJSON(400, prerrors.ErrNotFound)
 		return
 	}
