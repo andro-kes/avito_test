@@ -46,7 +46,7 @@ func (hm *HandlerManager) CreatePR(c *gin.Context) {
 
 func (hm *HandlerManager) MergePR(c *gin.Context) {
 	var pr models.PullRequestShort
-	if err := c.ShouldBindBodyWithJSON(&pr); err != nil {
+	if err := c.ShouldBindJSON(&pr); err != nil {
 		c.AbortWithStatusJSON(404, prerrors.ErrNotFound)
 		return
 	}
@@ -65,7 +65,7 @@ func (hm *HandlerManager) MergePR(c *gin.Context) {
 
 func (hm *HandlerManager) ReassignReviewer(c *gin.Context) {
 	var r models.ReassignRequest
-	if err := c.ShouldBindBodyWithJSON(&r); err != nil {
+	if err := c.ShouldBindJSON(&r); err != nil {
 		c.AbortWithStatusJSON(404, prerrors.ErrNotFound)
 		return
 	}
