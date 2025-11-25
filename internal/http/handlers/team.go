@@ -11,7 +11,7 @@ import (
 
 func (hm *HandlerManager) AddTeam(c *gin.Context) {
 	var team models.Team
-	if err := c.ShouldBindBodyWithJSON(&team); err != nil {
+	if err := c.ShouldBindJSON(&team); err != nil {
 		c.AbortWithStatusJSON(404, prerrors.ErrNotFound)
 		return
 	}
